@@ -7,7 +7,12 @@ using namespace std;
 
 Nappula::Nappula(wstring unicode, int vari, int koodi)
 {
-
+	// Saves the unicode symbol for this piece. Will be used when drawing the board with wcout.
+	_unicode = unicode;
+	// Saves the colour of each piece. 0 = white, 1 = black.
+	_vari = vari;
+	// Saces to "code" of each pice, like VT, VL, VR, VK, VS etc.
+	_koodi = koodi;
 }
 
 

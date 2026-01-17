@@ -21,10 +21,24 @@ Nappula* Asema::ms = new Sotilas(L"\u265F", 1, MS);
 
 Asema::Asema()
 {
-	// Ensin alustetaan kaikki laudan ruudut nappulla "NULL", koska muuten ruuduissa satunnaista tauhkaa
+	// Loop through all 8 rows
+	for (int r = 0; r < 8; r++)
+		// And all 8 columns
+		for (int c = 0; c < 8; c++)
+			// Set each square to nullptr because in c++ arrays are not automatically initialized, without this code the board could contain garbage values.
+			_lauta[r][c] = nullptr;
 
-	// Asetetaan alkuaseman mukaisesti nappulat ruuduille
-	
+	// Place the black piece on the board
+	_lauta[0][0] = mt; _lauta[0][1] = mr; _lauta[0][2] = ml; _lauta[0][3] = md;
+	_lauta[0][4] = mk; _lauta[0][5] = ml; _lauta[0][6] = mr; _lauta[0][7] = mt;
+	// This is for pawns
+	for (int c = 0; c < 8; c++) _lauta[1][c] = ms;
+
+	// Set the white pieces on the board
+	_lauta[7][0] = vt; _lauta[7][1] = vr; _lauta[7][2] = vl; _lauta[7][3] = vd;
+	_lauta[7][4] = vk; _lauta[7][5] = vl; _lauta[7][6] = vr; _lauta[7][7] = vt;
+	// This is for pawns
+	for (int c = 0; c < 8; c++) _lauta[6][c] = vs;
 }
 
 
