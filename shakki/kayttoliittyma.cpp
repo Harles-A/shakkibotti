@@ -25,26 +25,30 @@ void Kayttoliittyma::piirraLauta()
     // If the UI is not pointing to the correct Asema object, then we return to avoid crashes.
     if (_asema == nullptr) return;
 
-	// This enables unicode output for Windows console (might be redunant but better safe than sorry).
+    // This enables unicode output for Windows console (might be redunant but better safe than sorry).
     _setmode(_fileno(stdout), _O_U16TEXT);
-	// Requited to change console tect and background colors.
+    // Requited to change console tect and background colors.
     HANDLE h = GetStdHandle(STD_OUTPUT_HANDLE);
 
     // Loops through the board rows starting with 0 and ending on 7. i is the index of the row.
     for (int i = 0; i < 8; i++)
     {
+        // Makes the background of the number on the left light.
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 7);
+        // Prints 8 - the current row on the left before the board.
+        wcout << 8 - i;
         //Loops through the board columns starting with 0 and ending on 7. j is the index of the column
         for (int j = 0; j < 8; j++)
         {
-			// If the row + column is even, then the square is one color, if it is odd then it is a different color.
+            // If the row + column is even, then the square is one color, if it is odd then it is a different color.
             if ((i + j) % 2 == 0)
             {
-				// Sets the background color of the "light" squares.
+                // Sets the background color of the "light" squares.
                 SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 7);
             }
             else
             {
-				// Sets the background color of the "dark" squares.
+                // Sets the background color of the "dark" squares.
                 SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), BACKGROUND_INTENSITY | BACKGROUND_RED |
                     BACKGROUND_GREEN);
             }
@@ -56,12 +60,14 @@ void Kayttoliittyma::piirraLauta()
                 // then we print a 3-character "cell"
                 wcout << L" " << p->getUnicode() << L" ";
             else
-				// if there square is supposed to be empty, we print 3 spaces so the "cell" has same width. This keeps the board aligned.
+                // if there square is supposed to be empty, we print 3 spaces so the "cell" has same width. This keeps the board aligned.
                 wcout << L"   ";
         }
-		// After we finish a row, we print a newline to move to the next row.
+        // After we finish a row, we print a newline to move to the next row.
         wcout << L"\n";
     }
+    // Prints the corresponding letters at the bottom of the board
+    wcout << "  a "; wcout << " b "; wcout << " c "; wcout << " d "; wcout << " e "; wcout << " f "; wcout << " g "; wcout << " h";
 }
 
 
