@@ -25,9 +25,11 @@ void Kayttoliittyma::piirraLauta()
     // If the UI is not pointing to the correct Asema object, then we return to avoid crashes.
     if (_asema == nullptr) return;
 
-    // This enables unicode output for Windows console (might be redunant but better safe than sorry).
-    _setmode(_fileno(stdout), _O_U16TEXT);
-    // Requited to change console tect and background colors.
+    // Save the old stdout mode and switch stdout into UTF-16 mode.
+    // This is required so the Unicode chess piece symbols print correctly with wcout.
+    // Without restoring the old mode, later cout output can become problematic... such as becoming chinese characters.
+    int oldMode = _setmode(_fileno(stdout), _O_U16TEXT);
+    // Required to change console text and background colors.
     HANDLE h = GetStdHandle(STD_OUTPUT_HANDLE);
 
     // Loops through the board rows starting with 0 and ending on 7. i is the index of the row.
@@ -67,8 +69,12 @@ void Kayttoliittyma::piirraLauta()
         wcout << L"\n";
     }
     // Prints the corresponding letters at the bottom of the board
-    wcout << "  a "; wcout << " b "; wcout << " c "; wcout << " d "; wcout << " e "; wcout << " f "; wcout << " g "; wcout << " h";
+    wcout << L"  a "; wcout << L" b "; wcout << L" c "; wcout << L" d "; wcout << L" e "; wcout << L" f "; wcout << L" g "; wcout << L" h";
+
+    // Restores the old stdout mode so that normal cout output works correctly afterwards.
+    _setmode(_fileno(stdout), oldMode);
 }
+
 
 
 /*
@@ -78,10 +84,78 @@ void Kayttoliittyma::piirraLauta()
 */
 Siirto Kayttoliittyma::annaVastustajanSiirto()
 {
-	Siirto siirto;
-	return siirto;
-	
+	// Endless loop until user inputs a valid move.
+    while (true)
+    {
+        // Asks user to input a move. This uses cout (narrow output).
+        // This is why restoring stdout mode in piirraLauta() matters.
+        cout << " Anna siirto : ";
+
+		//Stores the input line into string s.
+        string s;
+		// "ws" skips any leading whitespace characters to ensure that getline reads the actual input without problems.
+        getline(cin >> ws, s);
+
+		// If the input is "O-O", then we return a Siirto object representing short castling.
+        if (s == "O-O")
+            return Siirto(true, false);
+		// If the input is "O-O-O", then we return a Siirto object representing long castling.
+        if (s == "O-O-O")
+            return Siirto(false, true);
+		// Normal move input validation that checks to make sure the input is exactly 6 characters long. For example "Rg1-f3".
+        if (s.length() != 6)
+        {
+            cout << "Virheellinen muoto.\n";
+            continue;
+        }
+		// First part of the 6 part series of the "split" input. This is the piece letter for example 'R' for ratsu. Check below for other parts.
+        char nappula = s[0];
+        // Makes sure the first character of the input s[0] is a valid piece letter.
+        if (!(nappula == 'T' || nappula == 'R' || nappula == 'L' || nappula == 'D' || nappula == 'K'))
+        {
+            cout << "Virheellinen nappulan kirjain.\n";
+            continue;
+        }
+        // Here we take the user input and "split" it into 6 different parts.
+		// First part we already had a few lines ago: char nappula = s[0];
+		char aFile = s[1]; // Second part is the starting square's column for example "g".
+		char aRank = s[2]; // Third part is starting square's row for example "1".
+		char dash = s[3]; // Fourth part is the symbol '-' that separates the starting and ending squares.
+		char lFile = s[4]; // Fifth part is ending square's column for example "f".
+		char lRank = s[5]; // Sixth part is ending square's row for example "3".
+
+		// Here we check to make sure that the starting and ending squares are valid chess board squares. In other words, columns a-h and rows 1-8.
+        if (!(aFile >= 'a' && aFile <= 'h') || !(lFile >= 'a' && lFile <= 'h'))
+        {
+            cout << "Virheellinen sarake (a-h).\n";
+            continue;
+        }
+
+        if (!(aRank >= '1' && aRank <= '8') || !(lRank >= '1' && lRank <= '8'))
+        {
+            cout << "Virheellinen rivi (1-8).\n";
+            continue;
+        }
+		// Here we check to make sure that the separating character is a proper dash '-' and not one of those discount lousy dashes from Temu.
+        if (dash != '-')
+        {
+            cout << "Virheellinen muoto (puuttuu '-').\n";
+            continue;
+        }
+		// If we reach this point, then the input is valid. We can now convert the input into a Siirto object and return it.
+		int alkuSarake = aFile - 'a'; // Converts 'a'-'h' into 0-7.
+		int loppuSarake = lFile - 'a'; // Converts 'a'-'h' into 0-7.        We need to do all these conversions because our internal board representation uses indexes from 0-7.
+		int alkuRivi = 8 - (aRank - '0'); // Converts '1'-'8' into 7-0.
+		int loppuRivi = 8 - (lRank - '0'); // Converts '1'-'8' into 7-0.
+
+		// Creates Ruutu objects for the starting and ending squares.
+        Ruutu alku(alkuSarake, alkuRivi);
+        Ruutu loppu(loppuSarake, loppuRivi);
+		// Returns a Siirto object constructed with the starting and ending squares a.ka "a normal move".
+        return Siirto(alku, loppu);
+    }
 }
+
 
 
 int Kayttoliittyma::kysyVastustajanVari()

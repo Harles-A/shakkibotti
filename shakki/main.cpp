@@ -12,10 +12,17 @@ using namespace std;
 
 int main()
 {
-	// Runs the test code to see if the chess board is drawn correctly.
-	Asema a;
-	Kayttoliittyma::getInstance()->aseta_asema(&a);
-	Kayttoliittyma::getInstance()->piirraLauta();
+	Asema asema; // Create a new Asema object representing the chess position.
+	Kayttoliittyma* ui = Kayttoliittyma::getInstance(); // Get the singleton instance of the Kayttoliittyma (user interface).
+	ui->aseta_asema(&asema); // Gives the UI a pointer to the current Asema so it can draw and read pieces
+
+	while (true) // Infinite loop: keeps asking for moves forever. For testing purposes.
+	{
+		ui->piirraLauta(); // Draws the current board position.
+		Siirto s = ui->annaVastustajanSiirto(); // Asks the user for their move and returns it as a Siirto object.
+		asema.paivitaAsema(&s); // Apply that move to the board state (updates _lauta + turn + flags)
+	}
+
 	
 	//wcout << "HeippariShakki\n";
 	//wcout << "Tervetuloa pelaamaan!\n";

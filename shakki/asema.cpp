@@ -28,6 +28,16 @@ Asema::Asema()
 			// Set each square to nullptr because in c++ arrays are not automatically initialized, without this code the board could contain garbage values.
 			_lauta[r][c] = nullptr;
 
+	// At the beginning of the game it is white's turn to move. So we set _siirtovuoro to 0 (white).
+	_siirtovuoro = 0;
+	// No pieces have moved at the start of the game, so all these booleans are set to false.
+	_onkoValkeaKuningasLiikkunut = false;
+	_onkoMustaKuningasLiikkunut = false;
+	_onkoValkeaDTliikkunut = false;
+	_onkoValkeaKTliikkunut = false;
+	_onkoMustaDTliikkunut = false;
+	_onkoMustaKTliikkunut = false;
+
 	// Place the black piece on the board
 	_lauta[0][0] = mt; _lauta[0][1] = mr; _lauta[0][2] = ml; _lauta[0][3] = md;
 	_lauta[0][4] = mk; _lauta[0][5] = ml; _lauta[0][6] = mr; _lauta[0][7] = mt;
@@ -82,55 +92,169 @@ void Asema::paivitaAsema(Siirto *siirto)
 
 	//päivitetään _siirtovuoro
 
+
+	// First we check to see if the move is "short castle" a.ka 0-0.
+	if (siirto->onkoLyhytLinna()) // We call the method onkoLyhytLinna() to check if the move is short castle. Returns true if it is.
+	{
+		// Here we check whose turn it is. (0 = white, 1 = black).
+		if (_siirtovuoro == 0) //If it is white's turn then we do the short castling for white.
+		{
+			// row 7 is white's back row. Column 4 is "e" column. So [7][4] is e1 where the white king starts.
+			_lauta[7][6] = _lauta[7][4]; // Move the king to g1 (column 6).
+			_lauta[7][4] = nullptr; // Set the e1 square to empty (nullptr) because king went bye-bye from there.
+			_lauta[7][5] = _lauta[7][7]; // Move the rook to f1 (column 5).
+			_lauta[7][7] = nullptr; // Set the h1 square to empty (nullptr) because rook went bye-bye from there.
+			// These booleans are here to keep track whether the white king and/or rook has moved at least once.
+			// Because if they have moved, castling is no longer allowed.
+			_onkoValkeaKuningasLiikkunut = true; // The white king has moved so the boolean is set to true.
+			_onkoValkeaKTliikkunut = true; // The white king-side chick / rook has moved so the boolean is set to true.
+		}
+		else // If it is not white's turn, it must be black's turn , so we do the short castling for black. All the code is same, just from black's perspective.
+		{
+			_lauta[0][6] = _lauta[0][4];
+			_lauta[0][4] = nullptr;
+			_lauta[0][5] = _lauta[0][7];
+			_lauta[0][7] = nullptr;
+
+			_onkoMustaKuningasLiikkunut = true;
+			_onkoMustaKTliikkunut = true;
+		}
+
+		// After we have done whichever colour's turn it was, we change the turn to the other color. If it was 0 (white) it becomes 1 (black) and the other way around.
+		_siirtovuoro = 1 - _siirtovuoro;
+		// We return from castling because it is a special move and we can't transition directly into normal move section below.
+		return;
+	}
+
+	// Here is the code for "long castling" which is a lot like short castling but longer. I assume. Don't really know much about chess tbh.
+	if (siirto->onkoPitkälinna()) // Returns true if Siirto is 0-0-0 a.ka long castle.
+	{
+		if (_siirtovuoro == 0) // As always, we check first to see if it is white's turn (because if it isn't then it is black's turn, duh).
+		{
+			_lauta[7][2] = _lauta[7][4]; // Move king's pointer from e1 to c1.
+			_lauta[7][4] = nullptr; // Clean up time!
+			_lauta[7][3] = _lauta[7][0]; // Move rook pointer from a1 to d1.
+			_lauta[7][0] = nullptr; // Clean up time!
+
+			// Same as before, we set the booleans true so that we know that king and the a1 rook have moved.
+			_onkoValkeaKuningasLiikkunut = true;
+			_onkoValkeaDTliikkunut = true;
+		}
+		// And here we do the same for black if it is their turn.
+		else
+		{
+			_lauta[0][2] = _lauta[0][4];
+			_lauta[0][4] = nullptr;
+			_lauta[0][3] = _lauta[0][0];
+			_lauta[0][0] = nullptr;
+
+			_onkoMustaKuningasLiikkunut = true;
+			_onkoMustaDTliikkunut = true;
+		}
+		// After we have done whichever colour's turn it was, we change the turn to the other color. If it was 0 (white) it becomes 1 (black) and the other way around.
+		_siirtovuoro = 1 - _siirtovuoro;
+		// We return from castling because it is a special move and we can't transition directly into normal move section below.
+		return;
+	}
+	// And now that we have finished playing around with "special super fun moves", we can finally do the normal moves. Hooray!
+	// We only get to this part of the code if the move was not castling. You win some, you lose some i suppose.
+
+	// We get the starting and ending squares of the move.
+	Ruutu alku = siirto->getAlkuruutu();
+	Ruutu loppu = siirto->getLoppuruutu();
+
+	// We extract the row and column index...es?
+	int alkuRivi = alku.getRivi();
+	int alkuSarake = alku.getSarake();
+	// And then we do the same for the ending square.
+	int loppuRivi = loppu.getRivi();
+	int loppuSarake = loppu.getSarake();
+
+	// Here we check which piece is being moved. A.ka which piece's pointer is in the starting square.
+	// We store that pointer in a variable called "liikutettava".
+	Nappula* liikutettava = _lauta[alkuRivi][alkuSarake];
+	
+	// We move the piece to the ending square by setting the pointer in the ending square to the pointer we stored in "liikutettava".
+	_lauta[loppuRivi][loppuSarake] = liikutettava;
+	// We clean up the starting square by setting it to nullptr.
+	_lauta[alkuRivi][alkuSarake] = nullptr;
+
+	// In the final part of our epic journey we check if the piece that was moved was a king or a rook.
+	// First we check to make sure we are not trying to move an empty square.
+	if (liikutettava != nullptr)
+	{
+		// We check what the "code" for the button in question is.
+		int koodi = liikutettava->getKoodi();
+		// If it is a king (VK or MK), we set the corresponding boolean to true.
+		if (koodi == VK) _onkoValkeaKuningasLiikkunut = true;
+		if (koodi == MK) _onkoMustaKuningasLiikkunut = true;
+
+		// If it is a rook, we check which rook it is by looking at the starting square. This way we find out if it was white or black and if it was the rook involved in short or long castling.
+		if (koodi == VT)
+		{
+			// White rooks
+			if (alkuRivi == 7 && alkuSarake == 0) _onkoValkeaDTliikkunut = true;
+			if (alkuRivi == 7 && alkuSarake == 7) _onkoValkeaKTliikkunut = true;
+		}
+		if (koodi == MT)
+		{
+			// Black rooks.
+			if (alkuRivi == 0 && alkuSarake == 0) _onkoMustaDTliikkunut = true;
+			if (alkuRivi == 0 && alkuSarake == 7) _onkoMustaKTliikkunut = true;
+		}
+	}
+	// Last but not least, we change the turn to the other color.
+	_siirtovuoro = 1 - _siirtovuoro;
+
 }
 
 
-
+// This function returns whose turn it is.
 int Asema::getSiirtovuoro() 
 {
-	return 0;
+	return _siirtovuoro;
 }
 
-
+// This function sets whose turn it is.
 void Asema::setSiirtovuoro(int vuoro) 
 {
-	
+	_siirtovuoro = vuoro;
 }
 
-
+// This returns true if white king has moved at least once.
 bool Asema::getOnkoValkeaKuningasLiikkunut() 
 {
-	return false;
+	return _onkoValkeaKuningasLiikkunut;
 }
 
-
+// Returns true if black king has moved at least once.
 bool Asema::getOnkoMustaKuningasLiikkunut() 
 {
-	return false;
+	return _onkoMustaKuningasLiikkunut;
 }
 
-
+// Returns true if white queen-side rook has moved at least once.
 bool Asema::getOnkoValkeaDTliikkunut() 
 {
-	return false;
+	return _onkoValkeaDTliikkunut;
 }
 
-
+// Returns true if white king-side rook has moved at least once.
 bool Asema::getOnkoValkeaKTliikkunut() 
 {
-	return false;
+	return _onkoValkeaKTliikkunut;
 }
 
-
+// Returns true if black queen-side rook has moved at least once.
 bool Asema::getOnkoMustaDTliikkunut() 
 {
-	return false;
+	return _onkoMustaDTliikkunut;
 }
 
-
+// Returns true if black king-side rook has moved at least once.
 bool Asema::getOnkoMustaKTliikkunut() 
 {
-	return false;
+	return _onkoMustaKTliikkunut;
 }
 
 
