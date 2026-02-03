@@ -65,6 +65,26 @@ void Kayttoliittyma::piirraLauta()
                 // if there square is supposed to be empty, we print 3 spaces so the "cell" has same width. This keeps the board aligned.
                 wcout << L"   ";
         }
+        // ---------- This section is here to fix the ugly yellow lines spilling outside the chessboard in console ----------
+        // Reset colors to normal before ending the line
+        SetConsoleTextAttribute(h, 7);
+
+        // Find console width + current cursor position
+        CONSOLE_SCREEN_BUFFER_INFO csbi;
+        GetConsoleScreenBufferInfo(h, &csbi);
+
+        // How many columns are left on this line?
+        int remaining = csbi.dwSize.X - csbi.dwCursorPosition.X;
+
+        // Paint the rest of the line normal (spaces with attribute 7)
+        if (remaining > 0)
+        {
+            DWORD written;
+            FillConsoleOutputCharacterW(h, L' ', remaining, csbi.dwCursorPosition, &written);
+            FillConsoleOutputAttribute(h, 7, remaining, csbi.dwCursorPosition, &written);
+        }
+        // -------------------------------------------------------------------------------------------------------------------
+        
         // After we finish a row, we print a newline to move to the next row.
         wcout << L"\n";
     }
@@ -111,7 +131,7 @@ Siirto Kayttoliittyma::annaVastustajanSiirto()
 		// First part of the 6 part series of the "split" input. This is the piece letter for example 'R' for ratsu. Check below for other parts.
         char nappula = s[0];
         // Makes sure the first character of the input s[0] is a valid piece letter.
-        if (!(nappula == 'T' || nappula == 'R' || nappula == 'L' || nappula == 'D' || nappula == 'K'))
+		if (!(nappula == 'T' || nappula == 'R' || nappula == 'L' || nappula == 'D' || nappula == 'K' || nappula == 'S')) // ADDED 'S' for Sotilas.
         {
             cout << "Virheellinen nappulan kirjain.\n";
             continue;

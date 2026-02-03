@@ -410,6 +410,27 @@ void Asema::huolehdiKuninkaanShakeista(std::list<Siirto>& lista, int vari)
 }
 
 
-void Asema::annaLaillisetSiirrot(std::list<Siirto>& lista) {
-	
+void Asema::annaLaillisetSiirrot(std::list<Siirto>& lista)
+{
+	// Go through every square on the board.
+	for (int r = 0; r < 8; r++)
+	{
+		for (int c = 0; c < 8; c++)
+		{
+			// Pointer to the piece on this square (nullptr if empty).
+			Nappula* p = _lauta[r][c];
+
+			// Only generate moves for the side whose turn it currently is.
+			if (p != nullptr && p->getVari() == _siirtovuoro)
+			{
+				// PS! Ruutu constructor is (sarake, rivi),
+				// but _lauta is indexed as [rivi][sarake].
+				Ruutu ruutu(c, r);
+
+				// Ask that piece to add all its moves into the list.
+				p->annaSiirrot(lista, &ruutu, this, _siirtovuoro);
+			}
+		}
+	}
 }
+
