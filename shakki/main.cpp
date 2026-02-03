@@ -19,8 +19,50 @@ int main()
 	while (true) // Infinite loop: keeps asking for moves forever. For testing purposes.
 	{
 		ui->piirraLauta(); // Draws the current board position.
+
+		cout << "\nVuoro: " << (asema.getSiirtovuoro() == 0 ? "VALKEA" : "MUSTA") << "\n"; // Helper to keep track whose turn it is as i keep forgetting.
+
 		Siirto s = ui->annaVastustajanSiirto(); // Asks the user for their move and returns it as a Siirto object.
-		asema.paivitaAsema(&s); // Apply that move to the board state (updates _lauta + turn + flags)
+
+
+		// Quit check:
+		if (s.getAlkuruutu().getRivi() == -1 && s.getAlkuruutu().getSarake() == -1)
+			break;
+
+		// Special check for Castling
+		if (s.onkoLyhytLinna() || s.onkoPitkälinna())
+		{
+			asema.paivitaAsema(&s);
+			continue;
+		}
+
+		// Generate all raw moves for the side whose turn it is
+		list<Siirto> sallitut;
+		asema.annaLaillisetSiirrot(sallitut);
+
+		bool loytyi = false;
+
+		// Check if the user's move exists in the generated move list (start + end match)
+		for (Siirto& sallittu : sallitut)
+		{
+			if (sallittu.getAlkuruutu().getRivi() == s.getAlkuruutu().getRivi() &&
+				sallittu.getAlkuruutu().getSarake() == s.getAlkuruutu().getSarake() &&
+				sallittu.getLoppuruutu().getRivi() == s.getLoppuruutu().getRivi() &&
+				sallittu.getLoppuruutu().getSarake() == s.getLoppuruutu().getSarake())
+			{
+				loytyi = true;
+				break;
+			}
+		}
+
+		if (loytyi)
+		{
+			asema.paivitaAsema(&s); // Apply that move to the board state (updates _lauta + turn + flags)
+		}
+		else
+		{
+			cout << "Virheellinen siirto!\n";
+		}
 	}
 
 	
