@@ -4,6 +4,9 @@
 #include "peli.h"
 #include "siirto.h"
 
+#include <string>
+using namespace std;
+
 
 // Shakkiohjelman käyttöliittymä, joka osaa visualisoida nykyisen aseman
 // ja lukea käyttäjän syöttämät siirrot. Singleton.
@@ -17,6 +20,10 @@ public:
 	int kysyVastustajanVari();
 
 	static Kayttoliittyma* getInstance();
+
+	// Asks user what piece they want to promote their pawn to and returns the corresponding unicode symbol as a wstring. vari is the color of the pawn being promoted (0 for white, 1 for black).
+	// Returns: "D", "T", "L", or "R" as a wide string.
+	std::wstring kysyKorotus(int vari);
 
 private:
 
