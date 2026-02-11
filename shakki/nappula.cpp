@@ -187,6 +187,32 @@ void Sotilas::annaSiirrot(std::list<Siirto>& lista, Ruutu* ruutu, Asema* asema, 
                 lista.push_back(syontiOikea);
         }
     }
+  
+    if (asema->kaksoisaskelSarakkeella != -1)
+    {
+        int kohdeSarake = asema->kaksoisaskelSarakkeella;
+
+        if (kohdeSarake == alkuSarake - 1 || kohdeSarake == alkuSarake + 1)
+        {
+            if ((vari == 0 && alkuRivi == 3) || (vari == 1 && alkuRivi == 4))
+            {
+                int ohestaLoppuRivi = alkuRivi + suunta;
+
+                if (ohestaLoppuRivi >= 0 && ohestaLoppuRivi <= 7 &&
+                    asema->_lauta[ohestaLoppuRivi][kohdeSarake] == nullptr)
+                {
+                    Nappula* ohestaKohde = asema->_lauta[alkuRivi][kohdeSarake];
+
+                    if (ohestaKohde != nullptr &&
+                        (ohestaKohde->getKoodi() == VS || ohestaKohde->getKoodi() == MS) &&
+                        ohestaKohde->getVari() != vari)
+                    {
+                        lista.push_back(Siirto(Ruutu(alkuSarake, alkuRivi), Ruutu(kohdeSarake, ohestaLoppuRivi)));
+                    }
+                }
+            }
+        }
+    }
 }
 
 

@@ -5,6 +5,7 @@
 #include <io.h>
 #include <iostream>
 #include "kayttoliittyma.h"
+#include <cwctype>
 
 using namespace std;
 
@@ -182,3 +183,22 @@ int Kayttoliittyma::kysyVastustajanVari()
 {
 	return 0;
 }
+
+std::wstring Kayttoliittyma::kysyKorotus(int vari)
+{
+    std::wstring nappula;
+    while (true)
+    {
+        std::wcout << L"Valitse korotus (D = Daami, T = Torni, L = Lahetti, R = Ratsu): ";
+        std::wcin >> nappula;
+        // Makes sure input is uppercase so user can type d/t/l etc.
+        for (auto& c : nappula) c = towupper(c);
+		// Only accepts these 4 options. If the input is valid, we break out of the loop and return the input. Otherwise we print an error message and ask again.
+        if (nappula == L"D" || nappula == L"T" || nappula == L"L" || nappula == L"R")
+            break;
+        else
+            std::wcout << L"Virheellinen valinta.\n";
+    }
+    return nappula;
+}
+

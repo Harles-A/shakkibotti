@@ -2,11 +2,11 @@
 #include <Windows.h>
 #include <io.h>
 #include <fcntl.h>
-#include <iostream>
 #include <string>
 #include "kayttoliittyma.h"
 #include "Siirto.h"
 #include "asema.h"
+#include <list>
 
 using namespace std; 
 
@@ -35,6 +35,8 @@ int main()
 			asema.paivitaAsema(&s);
 			continue;
 		}
+		// Get the piece that is being moved (if any) for promotion purposes later. We need to do this before we check if the move is legal, because if the move is illegal then we will ask the user for input again and we don't want to lose this information.
+		Nappula* nappula = asema._lauta[s.getAlkuruutu().getRivi()][s.getAlkuruutu().getSarake()];
 
 		// Generate all raw moves for the side whose turn it is
 		list<Siirto> sallitut;
@@ -57,6 +59,34 @@ int main()
 
 		if (loytyi)
 		{
+			// If the move is a pawn promotion move, we need to ask the user what piece they want to promote to and store that information in the Siirto object before we apply the move to the Asema.
+			if (nappula != nullptr && (nappula->getKoodi() == VS || nappula->getKoodi() == MS))
+			{
+				int loppuRivi = s.getLoppuruutu().getRivi();
+				// White promotes at row 0, black promotes at row 7.
+				if ((nappula->getVari() == 0 && loppuRivi == 0) ||
+					(nappula->getVari() == 1 && loppuRivi == 7))
+				{
+					// Ask the UI for the choice ("D","T","L","R").
+					std::wstring valinta = ui->kysyKorotus(nappula->getVari());
+					// Store the chosen piece pointer in the move object.
+					// paivitaAsema() will then place that piece on the board.
+					if (nappula->getVari() == 0)
+					{
+						if (valinta == L"D") s._miksikorotetaan = Asema::vd;
+						else if (valinta == L"T") s._miksikorotetaan = Asema::vt;
+						else if (valinta == L"L") s._miksikorotetaan = Asema::vl;
+						else if (valinta == L"R") s._miksikorotetaan = Asema::vr;
+					}
+					else
+					{
+						if (valinta == L"D") s._miksikorotetaan = Asema::md;
+						else if (valinta == L"T") s._miksikorotetaan = Asema::mt;
+						else if (valinta == L"L") s._miksikorotetaan = Asema::ml;
+						else if (valinta == L"R") s._miksikorotetaan = Asema::mr;
+					}
+				}
+			}
 			asema.paivitaAsema(&s); // Apply that move to the board state (updates _lauta + turn + flags)
 		}
 		else
