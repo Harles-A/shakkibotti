@@ -19,8 +19,25 @@ int main()
 	while (true) // Infinite loop: keeps asking for moves forever. For testing purposes.
 	{
 		ui->piirraLauta(); // Draws the current board position.
+		// Prints the evaluatiuon score of the current position. Positive score means white is better, negative score means black is better.
+		cout << "Evaluointi (valkea - musta): " << asema.evaluoi() << "\n";
 
 		cout << "\nVuoro: " << (asema.getSiirtovuoro() == 0 ? "VALKEA" : "MUSTA") << "\n"; // Helper to keep track whose turn it is as i keep forgetting.
+
+		// --- IF IT IS BLACK'S TURN WE LET THE AI PLAY AUTOMATICALLY TO TEST OUR STUFF. ---
+		if (asema.getSiirtovuoro() == 1)
+		{
+			MinMaxPaluu paluu = asema.mini(3); // Runs minmax from black's perspective with the depth of 3. Can be slow, change to 2 if needed, or even 1.
+			// Best move found for black.
+			Siirto aiSiirto = paluu._parasSiirto;
+			// Prints the evaluation after the AI’s chosen move, still in (white - black) terms.
+			// Negative = good for black, positive = good for white.
+			cout << "AI (MUSTA) evaluointi: " << paluu._evaluointiArvo << "\n";
+			// Next we apply the AI move to the real game board.
+			asema.paivitaAsema(&aiSiirto);
+			continue;
+		}
+		// ----------------------------------------------------------------------------------
 
 		Siirto s = ui->annaVastustajanSiirto(); // Asks the user for their move and returns it as a Siirto object.
 

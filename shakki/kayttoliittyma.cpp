@@ -91,6 +91,7 @@ void Kayttoliittyma::piirraLauta()
     }
     // Prints the corresponding letters at the bottom of the board
     wcout << L"  a "; wcout << L" b "; wcout << L" c "; wcout << L" d "; wcout << L" e "; wcout << L" f "; wcout << L" g "; wcout << L" h";
+	wcout << L"\n"; // Adds a newline after the letters at the bottom.
 
     // Restores the old stdout mode so that normal cout output works correctly afterwards.
     _setmode(_fileno(stdout), oldMode);
