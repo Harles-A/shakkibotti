@@ -118,6 +118,16 @@ Siirto Kayttoliittyma::annaVastustajanSiirto()
 		// "ws" skips any leading whitespace characters to ensure that getline reads the actual input without problems.
         getline(cin >> ws, s);
 
+        // Allow special commands
+        string t = s;
+        for (char& ch : t) ch = (char)tolower((unsigned char)ch);
+
+        if (t == "undo")
+            return Siirto(Ruutu(-2, -2), Ruutu(-2, -2)); // UNDO
+
+        if (t == "quit" || t == "q")
+            return Siirto(Ruutu(-1, -1), Ruutu(-1, -1)); // QUIT
+
 		// If the input is "O-O", then we return a Siirto object representing short castling.
         if (s == "O-O")
             return Siirto(true, false);

@@ -682,7 +682,7 @@ MinMaxPaluu Asema::maxi(int syvyys, double alfa, double beta)
 			}
 		}
 
-		paluu._evaluointiArvo = anyLegal ? evaluoi() : (-MATE); 
+		paluu._evaluointiArvo = anyLegal ? evaluoi() : (-MATE - syvyys);
 		return paluu;
 	}
 
@@ -778,7 +778,7 @@ MinMaxPaluu Asema::mini(int syvyys, double alfa, double beta)
 			}
 		}
 
-		paluu._evaluointiArvo = anyLegal ? evaluoi() : (MATE);
+		paluu._evaluointiArvo = anyLegal ? evaluoi() : (MATE + syvyys);
 		return paluu;
 	}
 
