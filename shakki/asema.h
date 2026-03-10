@@ -24,8 +24,8 @@ public:
 	// Nappula-oliot. Huomaa, että samaa nappulaa voidaan käyttää useissa eri ruuduissa.
 	// Määritelty static-määreellä, joten nappulat ovat kaikkien lauta-olioiden "yhteiskäytössä"
 	// (suorituskyvyn vuoksi).
-	static Nappula *vk, *vd, *vt, *vl, *vr, *vs;	// Valkeat nappulat.
-	static Nappula *mk, *md, *mt, *ml, *mr, *ms;	// Mustat nappulat.
+	static Nappula* vk, * vd, * vt, * vl, * vr, * vs;	// Valkeat nappulat.
+	static Nappula* mk, * md, * mt, * ml, * mr, * ms;	// Mustat nappulat.
 
 	// Ohestalyöntiä varten (-1 = sotilaan kaksoisaskelta ei tapahtunut edellisellä siirrolla).
 	int kaksoisaskelSarakkeella = -1;
@@ -34,8 +34,8 @@ public:
 	Asema();												// Asettaa alkuaseman.
 	void paivitaAsema(Siirto*);								// Päivittää aseman annetulla siirrolla.
 	double evaluoi();										// Aseman numeerinen arviointi.
-	MinMaxPaluu maxi(int syvyys);							// Minimax (max:n siirtovuoro).
-	MinMaxPaluu mini(int syvyys);							// Minimax (min:n siirtovuoro).
+	MinMaxPaluu maxi(int syvyys, double alfa, double beta);	// Minimax (max:n siirtovuoro).
+	MinMaxPaluu mini(int syvyys, double alfa, double beta);	// Minimax (min:n siirtovuoro).
 	MinMaxPaluu minimax(int syvyys);						// Minimax-algoritmi.
 	void annaLaillisetSiirrot(std::list<Siirto>& lista);	// Siirtogeneraattori.
 	int getSiirtovuoro();									// Palauttaa siirtovuoron.
@@ -46,7 +46,7 @@ public:
 	bool getOnkoValkeaKTliikkunut();						// Linnoittuminen mahdollista?
 	bool getOnkoMustaDTliikkunut();							// Linnoittuminen mahdollista?
 	bool getOnkoMustaKTliikkunut();							// Linnoittuminen mahdollista?
-	
+
 private:
 
 	// Lisäinformaatio pelitilanteesta.
@@ -66,5 +66,8 @@ private:
 	void annaLinnoitusSiirrot(std::list<Siirto>& lista, int vari);
 
 	// Karsii siirrot, jotka jättävät oman K:n shakkiin.
-	void huolehdiKuninkaanShakeista(std::list<Siirto>& lista, int vari); 
+	void huolehdiKuninkaanShakeista(std::list<Siirto>& lista, int vari);
+
+	void annaHakuSiirrot(std::list<Siirto>& lista); 
+	bool onkoKuningasShakissa(int omaVari);   
 };

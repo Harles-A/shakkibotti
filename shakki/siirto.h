@@ -12,7 +12,7 @@ class Siirto
 {
 public:
 	Siirto(Ruutu, Ruutu);
-	Siirto(){}
+	Siirto();
 	Siirto(bool, bool); // Linnoitus lyhesti (K-siipi) tai pitkästi (D-siipi?
 	Ruutu getAlkuruutu();
 	Ruutu getLoppuruutu();
