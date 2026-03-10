@@ -1,3 +1,6 @@
+#include <vector>
+#include <algorithm>
+#include <cstdlib>
 #include <iostream>
 #include "asema.h"
 #include "minMaxPaluu.h"
@@ -230,7 +233,7 @@ void Asema::paivitaAsema(Siirto* siirto)
 			{
 				// If no promotion piece is provided, default to queen.
 				_lauta[loppuRivi][loppuSarake] = (liikutettava->getVari() == 0) ? vd : md;
-			} 
+			}
 			// Old version commented out for now because minmax calls paivitaAsema() thousands of times and it would ask user for input during the search.
 			/*else
 			{
@@ -335,37 +338,128 @@ bool Asema::getOnkoMustaKTliikkunut()
 	return _onkoMustaKTliikkunut;
 }
 
+static const int PST_PAWN[64] = {
+	 0,  0,  0,  0,  0,  0,  0,  0,
+	50, 50, 50, 50, 50, 50, 50, 50,
+	10, 10, 20, 30, 30, 20, 10, 10,
+	 5,  5, 10, 25, 25, 10,  5,  5,
+	 0,  0,  0, 20, 20,  0,  0,  0,
+	 5, -5,-10,  0,  0,-10, -5,  5,
+	 5, 10, 10,-20,-20, 10, 10,  5,
+	 0,  0,  0,  0,  0,  0,  0,  0
+};
 
-/* 1. Laske nappuloiden arvo
-Daami = 9
-Torni = 5
-Lähetti = 3,25
-Ratsu = 3
-Sotilas = 1
+static const int PST_KNIGHT[64] = {
+   -50,-40,-30,-30,-30,-30,-40,-50,
+   -40,-20,  0,  5,  5,  0,-20,-40,
+   -30,  5, 10, 15, 15, 10,  5,-30,
+   -30,  0, 15, 20, 20, 15,  0,-30,
+   -30,  5, 15, 20, 20, 15,  5,-30,
+   -30,  0, 10, 15, 15, 10,  0,-30,
+   -40,-20,  0,  0,  0,  0,-20,-40,
+   -50,-40,-30,-30,-30,-30,-40,-50
+};
 
-2. Kuninkaan hyvyys
-Jos avaus tai keskipeli, niin hyvä että kunigas g1 tai b1/c1
-Loppupelissä vaikea sanoa halutaanko olla auttamassa omaa sotilasta korottumaan
-vai olla estämässä vastustajan korotusta siksi ei oteta kantaa
-3. Arvosta keskustaa sotilailla ja ratsuilla
-4. Arvosta pitkiä linjoja daami, torni ja lähetti
-*/
+static int pstLookup(const int table[64], int vari, int r, int c)
+{
+	int rr = (vari == 0) ? r : (7 - r);
+	return table[rr * 8 + c];
+}
+
+static int pstBonus(int koodi, int vari, int r, int c)
+{
+	if (koodi == VS || koodi == MS) return pstLookup(PST_PAWN, vari, r, c);
+	if (koodi == VR || koodi == MR) return pstLookup(PST_KNIGHT, vari, r, c);
+	return 0;
+}
+
 double Asema::evaluoi()
 {
-	double valkoinen = laskeNappuloidenArvo(0) + nappuloitaKeskella(0) + linjat(0);
+	int score = 0;
 
-	double musta = laskeNappuloidenArvo(1) + nappuloitaKeskella(1) + linjat(1);
+	auto val = [&](int koodi) -> int {
+		if (koodi == VS || koodi == MS) return 100;
+		if (koodi == VR || koodi == MR) return 320;
+		if (koodi == VL || koodi == ML) return 330;
+		if (koodi == VT || koodi == MT) return 500;
+		if (koodi == VD || koodi == MD) return 900;
+		return 0;
+		};
 
-	if (onkoAvausTaiKeskipeli(0))
+	int wPawnFile[8] = { 0 }, bPawnFile[8] = { 0 };
+	int wBish = 0, bBish = 0;
+	int wKr = -1, wKc = -1, bKr = -1, bKc = -1;
+
+	for (int r = 0; r < 8; r++)
 	{
-		if (_lauta[7][6] == vk || _lauta[7][2] == vk) valkoinen += 0.4;
-	}
-	if (onkoAvausTaiKeskipeli(1))
-	{
-		if (_lauta[0][6] == mk || _lauta[0][2] == mk) musta += 0.4;
+		for (int c = 0; c < 8; c++)
+		{
+			Nappula* n = _lauta[r][c];
+			if (!n) continue;
+
+			int k = n->getKoodi();
+			int v = n->getVari();
+
+			if (k == VS) wPawnFile[c]++;
+			if (k == MS) bPawnFile[c]++;
+
+			if (k == VL) wBish++;
+			if (k == ML) bBish++;
+
+			if (k == VK) { wKr = r; wKc = c; }
+			if (k == MK) { bKr = r; bKc = c; }
+		}
 	}
 
-	return valkoinen - musta;
+	for (int r = 0; r < 8; r++)
+	{
+		for (int c = 0; c < 8; c++)
+		{
+			Nappula* n = _lauta[r][c];
+			if (!n) continue;
+
+			int k = n->getKoodi();
+			int v = n->getVari(); 
+
+			int s = val(k);
+			s += pstBonus(k, v, r, c);
+
+			int dr = std::abs(r - 3);
+			int dc = std::abs(c - 3);
+			int center = (6 - (dr + dc)); 
+			if (center < 0) center = 0;
+
+			if (k == VL || k == ML) s += center * 4;  
+			if (k == VD || k == MD) s += center * 2;   
+
+			if (k == VT || k == MT)
+			{
+				int friendly = (v == 0) ? wPawnFile[c] : bPawnFile[c];
+				int enemy = (v == 0) ? bPawnFile[c] : wPawnFile[c];
+				if (friendly == 0 && enemy == 0) s += 12;
+				else if (friendly == 0) s += 6;
+			}
+
+			if (v == 0) score += s;
+			else score -= s;
+		}
+	}
+
+	if (wBish >= 2) score += 25;
+	if (bBish >= 2) score -= 25;
+
+	for (int f = 0; f < 8; f++)
+	{
+		if (wPawnFile[f] > 1) score -= (wPawnFile[f] - 1) * 12;
+		if (bPawnFile[f] > 1) score += (bPawnFile[f] - 1) * 12;
+	}
+
+	if (wKr == 7 && (wKc == 6 || wKc == 2)) score += 15;
+	if (bKr == 0 && (bKc == 6 || bKc == 2)) score -= 15;
+
+	score += (_siirtovuoro == 0) ? 5 : -5;
+
+	return (double)score;
 }
 
 
@@ -506,6 +600,7 @@ double Asema::linjat(int vari)
 //	}
 //	return min;
 //}
+
 MinMaxPaluu Asema::minimax(int syvyys)
 {
 	// paluuarvo holds the result we return which includes the evaluation score as well as the best move found.
@@ -528,130 +623,71 @@ MinMaxPaluu Asema::minimax(int syvyys)
 
 
 	if (_siirtovuoro == 0) // _siirtovuoro is 0 if it is white's turn to move and 1 if it is black's turn to move.
-		paluuarvo = maxi(syvyys);   // White's turn to move so we want to find the move that maximizes the evaluation.
+		paluuarvo = maxi(syvyys, -1e18, 1e18);   // White's turn to move so we want to find the move that maximizes the evaluation.
 	else
-		paluuarvo = mini(syvyys);   // Black's turn to move so we want the move that minimizes the evaluation.
+		paluuarvo = mini(syvyys, -1e18, 1e18);   // Black's turn to move so we want the move that minimizes the evaluation.
 
 	return paluuarvo;
 }
 
 
-MinMaxPaluu Asema::maxi(int syvyys)
-{ // This function is used when it is white's turn to move.
+MinMaxPaluu Asema::maxi(int syvyys, double alfa, double beta)
+{
 	MinMaxPaluu paluu;
+	const double INF = 1e18;
+	const double MATE = 100000.0;
 
-	// Here we generate ALL legal moves for white.
-	std::list<Siirto> siirrot;
-	annaLaillisetSiirrot(siirrot);
-	// If there are no legal moves, the game is either:
-	// - checkmate (if the king is attacked)
-	// - stalemate (if the king is NOT attacked)
-	if (siirrot.empty())
-	{
-		// We find the white king on the board to test if it is in "check" or not.
-		Ruutu kuningas(0, 0); // We start our search and rescue at 0,0 location.
-		// loytyi tells if we found the king.
-		bool loytyi = false; // We set it to false at the start for obvious reasons.
-		// Scans the squares of the board [row][column] for the white king's pointer (vk).
-		for (int r = 0; r < 8 && !loytyi; r++)
+	std::list<Siirto> lista;
+	annaHakuSiirrot(lista);
+
+	std::vector<Siirto> siirrot(lista.begin(), lista.end());
+	auto heur = [&](Siirto s) -> int
 		{
-			for (int c = 0; c < 8; c++)
-			{
-				// If the pointer stores in this square is the same as the pointer for the white king (vk),
-				// then we know we have found the king. Long live the king!
-				if (_lauta[r][c] == vk)
-				{
-					kuningas = Ruutu(c, r); // We save the location of the king in case we need to check if it is attacked later.
-					loytyi = true; // We set loytyi to true so that we can break out of the loop.
-					break;
-				}
-			}
-		}
-		// If the white king was found and that square is attacked by black then it is checkmate.
-		if (loytyi && onkoRuutuUhattu(&kuningas, 1))
-			paluu._evaluointiArvo = -100000.0; // Big negative score for being checkmated. No fun allowed.
-		else
-			// If it is stalemate (no legal moves but not in check) we get a draw, which is a neutral result, so we give it a score of 0.
-			paluu._evaluointiArvo = 0.0;
-		// In such terrible situation, we dont have a "best move" to play so we just return and go cry in the corner.
-		return paluu;
-	}
-	// If we reach depth 0, we stop searching deeper and we evaluate the position as is.
-	if (syvyys == 0)
-	{
-		paluu._evaluointiArvo = evaluoi(); 
-		return paluu;
-	}
+			if (s.onkoLyhytLinna() || s.onkoPitkälinna()) return 1;
 
-	// Next we will search all legal moves and pick the one that gives the maximum score.
+			Ruutu a = s.getAlkuruutu();
+			Ruutu b = s.getLoppuruutu();
+			Nappula* mover = _lauta[a.getRivi()][a.getSarake()];
+			if (!mover) return 0;
 
-	double parasArvo = -1e18; // We initialize the best score to a very low number because we want to maximize it.
-	bool eka = true; // The first move always becomes the best move so we use this boolean to check if we are looking at the first move or not.
-	// Here we loop through all legal moves ("s") for white.
-	for (auto& s : siirrot)
-	{
-		// We create a copy of the current position (called "seuraaja") and we make the move "s" on that copy. This way we get the position that would result from playing the move "s".
-		// The copy includes board pointers (_lauta), turn (_siirtovuoro) and the booleans for castling and en passant etc.
-		Asema seuraaja = *this;
-		// Here we apply the move to the copied position
-		seuraaja.paivitaAsema(&s);
-		// After white plays a move, it becomes black's turn.
-		// So we call mini() to see what black would do in response.
-		double arvo = seuraaja.mini(syvyys - 1)._evaluointiArvo;
-		// If this move is better than our current best, update best score and best move.
-		if (eka || arvo > parasArvo)
-		{
-			eka = false; // If it is no longer the first move we checked, that is the best, we set eka back to false.
-			parasArvo = arvo;
-			paluu._parasSiirto = s; // This stores the move that gave the best evaluation.
-		}
-	}
+			int k = mover->getKoodi();
+			if ((k == VS && b.getRivi() == 0) || (k == MS && b.getRivi() == 7)) return 3;
 
-	paluu._evaluointiArvo = parasArvo; // After checking all moves, store the best score.
-	return paluu; // Returns the best move AND the best score. Or in other words, the best score and the move that gave the score.
-}
+			Nappula* victim = _lauta[b.getRivi()][b.getSarake()];
+			if (victim != nullptr) return 2;
+			if ((k == VS || k == MS) && a.getSarake() != b.getSarake()) return 2;
 
-
-MinMaxPaluu Asema::mini(int syvyys)
-{ // This is the function for black. It works the same way as maxi for white, check that for comments, i'm not going to repeat them here. I'll just point out some differences.
-	MinMaxPaluu paluu;
-
-	std::list<Siirto> siirrot;
-	annaLaillisetSiirrot(siirrot);
-
-	if (siirrot.empty())
-	{
-		Ruutu kuningas(0, 0);
-		bool loytyi = false;
-
-		for (int r = 0; r < 8 && !loytyi; r++)
-		{
-			for (int c = 0; c < 8; c++)
-			{
-				if (_lauta[r][c] == mk)
-				{
-					kuningas = Ruutu(c, r);
-					loytyi = true;
-					break;
-				}
-			}
-		}
-
-		if (loytyi && onkoRuutuUhattu(&kuningas, 0))
-			paluu._evaluointiArvo = 100000.0; // Big positive score for being in checkmate.
-		else
-			paluu._evaluointiArvo = 0.0;
-
-		return paluu;
-	}
+			return 0;
+		};
+	std::stable_sort(siirrot.begin(), siirrot.end(),
+		[&](Siirto a, Siirto b) { return heur(a) > heur(b); });
 
 	if (syvyys == 0)
 	{
-		paluu._evaluointiArvo = evaluoi();
+		if (!onkoKuningasShakissa(0))
+		{
+			paluu._evaluointiArvo = evaluoi();
+			return paluu;
+		}
+
+		bool anyLegal = false;
+		for (auto& s : siirrot)
+		{
+			Asema seuraaja = *this;
+			seuraaja.paivitaAsema(&s);
+			if (!seuraaja.onkoKuningasShakissa(0))
+			{
+				anyLegal = true;
+				break;
+			}
+		}
+
+		paluu._evaluointiArvo = anyLegal ? evaluoi() : (-MATE); 
 		return paluu;
 	}
 
-	double parasArvo = 1e18; // We use a very high positive number here instead of negative like for white.
+	double parasArvo = -INF;
+	bool loytyiLaillinen = false;
 	bool eka = true;
 
 	for (auto& s : siirrot)
@@ -659,7 +695,108 @@ MinMaxPaluu Asema::mini(int syvyys)
 		Asema seuraaja = *this;
 		seuraaja.paivitaAsema(&s);
 
-		double arvo = seuraaja.maxi(syvyys - 1)._evaluointiArvo;
+		if (seuraaja.onkoKuningasShakissa(0))
+			continue;
+
+		loytyiLaillinen = true;
+
+		double arvo = seuraaja.mini(syvyys - 1, alfa, beta)._evaluointiArvo;
+
+		if (eka || arvo > parasArvo)
+		{
+			eka = false;
+			parasArvo = arvo;
+			paluu._parasSiirto = s;
+		}
+
+		if (parasArvo > alfa) alfa = parasArvo;
+		if (alfa >= beta) break; 
+	}
+
+	if (!loytyiLaillinen)
+	{
+		if (onkoKuningasShakissa(0))
+			paluu._evaluointiArvo = -MATE - syvyys;
+		else
+			paluu._evaluointiArvo = 0.0;
+		return paluu;
+	}
+
+	paluu._evaluointiArvo = parasArvo;
+	return paluu;
+}
+
+
+MinMaxPaluu Asema::mini(int syvyys, double alfa, double beta)
+{
+	MinMaxPaluu paluu;
+	const double INF = 1e18;
+	const double MATE = 100000.0;
+
+	std::list<Siirto> lista;
+	annaHakuSiirrot(lista);
+
+	std::vector<Siirto> siirrot(lista.begin(), lista.end());
+	auto heur = [&](Siirto s) -> int
+		{
+			if (s.onkoLyhytLinna() || s.onkoPitkälinna()) return 1;
+
+			Ruutu a = s.getAlkuruutu();
+			Ruutu b = s.getLoppuruutu();
+			Nappula* mover = _lauta[a.getRivi()][a.getSarake()];
+			if (!mover) return 0;
+
+			int k = mover->getKoodi();
+			if ((k == VS && b.getRivi() == 0) || (k == MS && b.getRivi() == 7)) return 3;
+
+			Nappula* victim = _lauta[b.getRivi()][b.getSarake()];
+			if (victim != nullptr) return 2;
+			if ((k == VS || k == MS) && a.getSarake() != b.getSarake()) return 2;
+
+			return 0;
+		};
+	std::stable_sort(siirrot.begin(), siirrot.end(),
+		[&](Siirto a, Siirto b) { return heur(a) > heur(b); });
+
+	if (syvyys == 0)
+	{
+		if (!onkoKuningasShakissa(1))
+		{
+			paluu._evaluointiArvo = evaluoi();
+			return paluu;
+		}
+
+		bool anyLegal = false;
+		for (auto& s : siirrot)
+		{
+			Asema seuraaja = *this;
+			seuraaja.paivitaAsema(&s);
+			if (!seuraaja.onkoKuningasShakissa(1))
+			{
+				anyLegal = true;
+				break;
+			}
+		}
+
+		paluu._evaluointiArvo = anyLegal ? evaluoi() : (MATE);
+		return paluu;
+	}
+
+	double parasArvo = INF;
+	bool loytyiLaillinen = false;
+	bool eka = true;
+
+	for (auto& s : siirrot)
+	{
+		Asema seuraaja = *this;
+		seuraaja.paivitaAsema(&s);
+
+		if (seuraaja.onkoKuningasShakissa(1))
+			continue;
+
+		loytyiLaillinen = true;
+
+		double arvo = seuraaja.maxi(syvyys - 1, alfa, beta)._evaluointiArvo;
 
 		if (eka || arvo < parasArvo)
 		{
@@ -667,6 +804,18 @@ MinMaxPaluu Asema::mini(int syvyys)
 			parasArvo = arvo;
 			paluu._parasSiirto = s;
 		}
+
+		if (parasArvo < beta) beta = parasArvo;
+		if (beta <= alfa) break; 
+	}
+
+	if (!loytyiLaillinen)
+	{
+		if (onkoKuningasShakissa(1))
+			paluu._evaluointiArvo = MATE + syvyys; 
+		else
+			paluu._evaluointiArvo = 0.0;
+		return paluu;
 	}
 
 	paluu._evaluointiArvo = parasArvo;
@@ -862,4 +1011,40 @@ void Asema::annaLaillisetSiirrot(std::list<Siirto>& lista)
 
 	huolehdiKuninkaanShakeista(lista, _siirtovuoro);
 
+}
+
+void Asema::annaHakuSiirrot(std::list<Siirto>& lista)
+{
+	for (int r = 0; r < 8; r++)
+	{
+		for (int c = 0; c < 8; c++)
+		{
+			Nappula* p = _lauta[r][c];
+			if (p != nullptr && p->getVari() == _siirtovuoro)
+			{
+				Ruutu ruutu(c, r);
+				p->annaSiirrot(lista, &ruutu, this, _siirtovuoro);
+			}
+		}
+	}
+
+	annaLinnoitusSiirrot(lista, _siirtovuoro);
+}
+
+bool Asema::onkoKuningasShakissa(int omaVari)
+{
+	Nappula* kingPtr = (omaVari == 0) ? vk : mk;
+
+	for (int r = 0; r < 8; r++)
+	{
+		for (int c = 0; c < 8; c++)
+		{
+			if (_lauta[r][c] == kingPtr)
+			{
+				Ruutu k(c, r);
+				return onkoRuutuUhattu(&k, 1 - omaVari);
+			}
+		}
+	}
+	return false;
 }

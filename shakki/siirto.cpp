@@ -13,11 +13,24 @@ Siirto::Siirto(Ruutu _alkuRuutu, Ruutu _loppuRuutu)
 	this->_pitkaLinna = false;
 }
 
-// Constructor for castling special move.
-Siirto::Siirto(bool _lyhytLinna, bool _pitkaLinna) 
+using namespace std;
+
+Siirto::Siirto(bool _lyhytLinna, bool _pitkaLinna)
 {
-	this->_lyhytLinna = _lyhytLinna; // Store whether the move is short castling
-	this->_pitkaLinna = _pitkaLinna; // Store whether the move is long castling
+	this->_alkuRuutu = Ruutu(0, 0);
+	this->_loppuRuutu = Ruutu(0, 0);
+	this->_lyhytLinna = _lyhytLinna;
+	this->_pitkaLinna = _pitkaLinna;
+	this->_miksikorotetaan = nullptr;
+}
+
+Siirto::Siirto()
+{
+	_alkuRuutu = Ruutu(0, 0);
+	_loppuRuutu = Ruutu(0, 0);
+	_lyhytLinna = false;
+	_pitkaLinna = false;
+	_miksikorotetaan = nullptr;
 }
 
 // Getter which returns the starting square of the move
@@ -32,7 +45,7 @@ Ruutu Siirto::getLoppuruutu()
 	return _loppuRuutu;
 }
 
-// Returns true if this move is short castling (O-O)..............................<O_O>
+// Returns true if this move is short castling (O-O)
 bool Siirto::onkoLyhytLinna() 
 {
 	return _lyhytLinna;

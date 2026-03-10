@@ -3,157 +3,167 @@
 #include <io.h>
 #include <fcntl.h>
 #include <string>
+#include <list>
+#include <cctype>
+
 #include "kayttoliittyma.h"
 #include "Siirto.h"
 #include "asema.h"
-#include <list>
 
-using namespace std; 
+using namespace std;
+
+static string ruutuToStr(Ruutu r)
+{
+    char file = char('a' + r.getSarake());
+    int rankNum = 8 - r.getRivi(); 
+    char rank = char('0' + rankNum);
+
+    string out;
+    out += file;
+    out += rank;
+    return out;
+}
+
+static char nappulaKirjain(Nappula* n)
+{
+    if (!n) return '?';
+
+    if (n == Asema::vt || n == Asema::mt) return 'T'; // Torni
+    if (n == Asema::vr || n == Asema::mr) return 'R'; // Ratsu
+    if (n == Asema::vl || n == Asema::ml) return 'L'; // Lahetti
+    if (n == Asema::vd || n == Asema::md) return 'D'; // Daami
+    if (n == Asema::vk || n == Asema::mk) return 'K'; // Kuningas
+    if (n == Asema::vs || n == Asema::ms) return 'S'; // Sotilas
+
+    return '?';
+}
+
+static string siirtoToStr(Siirto& s, Asema& asema)
+{
+    if (s.onkoLyhytLinna()) return "O-O";
+    if (s.onkoPitkälinna()) return "O-O-O";
+
+    Ruutu a = s.getAlkuruutu();
+    Ruutu b = s.getLoppuruutu();
+
+    Nappula* mover = asema._lauta[a.getRivi()][a.getSarake()];
+    char kirjain = nappulaKirjain(mover);
+
+    string out;
+    out += kirjain;
+    out += ruutuToStr(a);
+    out += "-";
+    out += ruutuToStr(b);
+    return out;
+}
 
 int main()
 {
-	Asema asema; // Create a new Asema object representing the chess position.
-	Kayttoliittyma* ui = Kayttoliittyma::getInstance(); // Get the singleton instance of the Kayttoliittyma (user interface).
-	ui->aseta_asema(&asema); // Gives the UI a pointer to the current Asema so it can draw and read pieces
+    const int SYVYYS = 4;
 
-	while (true) // Infinite loop: keeps asking for moves forever. For testing purposes.
-	{
-		ui->piirraLauta(); // Draws the current board position.
-		// Prints the evaluatiuon score of the current position. Positive score means white is better, negative score means black is better.
-		cout << "Evaluointi (valkea - musta): " << asema.evaluoi() << "\n";
+    Asema asema;
+    Kayttoliittyma* ui = Kayttoliittyma::getInstance();
+    ui->aseta_asema(&asema);
 
-		cout << "\nVuoro: " << (asema.getSiirtovuoro() == 0 ? "VALKEA" : "MUSTA") << "\n"; // Helper to keep track whose turn it is as i keep forgetting.
+    int bottiVari = 0;
+    while (true)
+    {
+        cout << "Botti pelaa (V)alkea vai (M)usta? ";
+        string s;
+        getline(cin, s);
+        if (s.empty()) continue;
 
-		// --- IF IT IS BLACK'S TURN WE LET THE AI PLAY AUTOMATICALLY TO TEST OUR STUFF. ---
-		if (asema.getSiirtovuoro() == 1)
-		{
-			MinMaxPaluu paluu = asema.mini(3); // Runs minmax from black's perspective with the depth of 3. Can be slow, change to 2 if needed, or even 1.
-			// Best move found for black.
-			Siirto aiSiirto = paluu._parasSiirto;
-			// Prints the evaluation after the AI’s chosen move, still in (white - black) terms.
-			// Negative = good for black, positive = good for white.
-			cout << "AI (MUSTA) evaluointi: " << paluu._evaluointiArvo << "\n";
-			// Next we apply the AI move to the real game board.
-			asema.paivitaAsema(&aiSiirto);
-			continue;
-		}
-		// ----------------------------------------------------------------------------------
+        char c = (char)tolower((unsigned char)s[0]);
+        if (c == 'v') { bottiVari = 0; break; }
+        if (c == 'm') { bottiVari = 1; break; }
 
-		Siirto s = ui->annaVastustajanSiirto(); // Asks the user for their move and returns it as a Siirto object.
+        cout << "Anna V tai M.\n";
+    }
 
+    cout << "Botti: " << (bottiVari == 0 ? "VALKEA" : "MUSTA") << "\n\n";
 
-		// Quit check:
-		if (s.getAlkuruutu().getRivi() == -1 && s.getAlkuruutu().getSarake() == -1)
-			break;
+    while (true)
+    {
+        ui->piirraLauta();
 
-		// Special check for Castling
-		if (s.onkoLyhytLinna() || s.onkoPitkälinna())
-		{
-			asema.paivitaAsema(&s);
-			continue;
-		}
-		// Get the piece that is being moved (if any) for promotion purposes later. We need to do this before we check if the move is legal, because if the move is illegal then we will ask the user for input again and we don't want to lose this information.
-		Nappula* nappula = asema._lauta[s.getAlkuruutu().getRivi()][s.getAlkuruutu().getSarake()];
+        cout << "Evaluointi (valkea - musta): " << asema.evaluoi() << "\n";
+        cout << "Vuoro: " << (asema.getSiirtovuoro() == 0 ? "VALKEA" : "MUSTA") << "\n";
 
-		// Generate all raw moves for the side whose turn it is
-		list<Siirto> sallitut;
-		asema.annaLaillisetSiirrot(sallitut);
+        if (asema.getSiirtovuoro() == bottiVari)
+        {
+            cout << "Bot thinking... (depth " << SYVYYS << ")\n";
 
-		bool loytyi = false;
+            MinMaxPaluu paluu = asema.minimax(SYVYYS);
+            Siirto botSiirto = paluu._parasSiirto;
 
-		// Check if the user's move exists in the generated move list (start + end match)
-		for (Siirto& sallittu : sallitut)
-		{
-			if (sallittu.getAlkuruutu().getRivi() == s.getAlkuruutu().getRivi() &&
-				sallittu.getAlkuruutu().getSarake() == s.getAlkuruutu().getSarake() &&
-				sallittu.getLoppuruutu().getRivi() == s.getLoppuruutu().getRivi() &&
-				sallittu.getLoppuruutu().getSarake() == s.getLoppuruutu().getSarake())
-			{
-				loytyi = true;
-				break;
-			}
-		}
+            cout << "Bot siirto: " << siirtoToStr(botSiirto, asema) << "\n";
+            cout << "Bot evaluointi: " << paluu._evaluointiArvo << "\n\n";
 
-		if (loytyi)
-		{
-			// If the move is a pawn promotion move, we need to ask the user what piece they want to promote to and store that information in the Siirto object before we apply the move to the Asema.
-			if (nappula != nullptr && (nappula->getKoodi() == VS || nappula->getKoodi() == MS))
-			{
-				int loppuRivi = s.getLoppuruutu().getRivi();
-				// White promotes at row 0, black promotes at row 7.
-				if ((nappula->getVari() == 0 && loppuRivi == 0) ||
-					(nappula->getVari() == 1 && loppuRivi == 7))
-				{
-					// Ask the UI for the choice ("D","T","L","R").
-					std::wstring valinta = ui->kysyKorotus(nappula->getVari());
-					// Store the chosen piece pointer in the move object.
-					// paivitaAsema() will then place that piece on the board.
-					if (nappula->getVari() == 0)
-					{
-						if (valinta == L"D") s._miksikorotetaan = Asema::vd;
-						else if (valinta == L"T") s._miksikorotetaan = Asema::vt;
-						else if (valinta == L"L") s._miksikorotetaan = Asema::vl;
-						else if (valinta == L"R") s._miksikorotetaan = Asema::vr;
-					}
-					else
-					{
-						if (valinta == L"D") s._miksikorotetaan = Asema::md;
-						else if (valinta == L"T") s._miksikorotetaan = Asema::mt;
-						else if (valinta == L"L") s._miksikorotetaan = Asema::ml;
-						else if (valinta == L"R") s._miksikorotetaan = Asema::mr;
-					}
-				}
-			}
-			asema.paivitaAsema(&s); // Apply that move to the board state (updates _lauta + turn + flags)
-		}
-		else
-		{
-			cout << "Virheellinen siirto!\n";
-		}
-	}
+            asema.paivitaAsema(&botSiirto);
+            continue;
+        }
 
-	
-	//wcout << "HeippariShakki\n";
-	//wcout << "Tervetuloa pelaamaan!\n";
-	//int lopetus = 100;
-	//Asema asema; 
-	//Kayttoliittyma::getInstance()->aseta_asema(&asema);
+        Siirto s = ui->annaVastustajanSiirto();
 
-	//Peli peli(Kayttoliittyma::getInstance()->
-	//	kysyVastustajanVari());
-	//std::list<Siirto> lista;
-	//system("cls");
-	//int koneenVari = peli.getKoneenVari();
+        if (s.getAlkuruutu().getRivi() == -1 && s.getAlkuruutu().getSarake() == -1)
+            break;
 
-	//while (lopetus != 0) {
-	//	lista.clear();
-	//	Kayttoliittyma::getInstance()->piirraLauta();
-	//	wcout << "\n";
-	//	// Tarkasta onko peli loppu?
-	//	asema.annaLaillisetSiirrot(lista);
-	//	if (lista.size() == 0) {
-	//		lopetus = 0;
-	//		std::wcout << "Peli loppui";
-	//		continue;
-	//	}
-	//	Siirto siirto;
-	//	if (asema.getSiirtovuoro() == koneenVari) {
-	//		MinMaxPaluu paluu;
-	//		if (koneenVari == 0) {
-	//			paluu = asema.maxi(3);
-	//		}
-	//		else {
-	//			paluu = asema.mini(3);
-	//		}
-	//		siirto = paluu._parasSiirto;
-	//	}
-	//	else {
-	//		siirto = Kayttoliittyma::getInstance()->
-	//			annaVastustajanSiirto();
-	//	}
-	//	asema.paivitaAsema(&siirto);
-	//}
+        if (s.onkoLyhytLinna() || s.onkoPitkälinna())
+        {
+            asema.paivitaAsema(&s);
+            continue;
+        }
 
-	
-	return 0;
+        Nappula* nappula = asema._lauta[s.getAlkuruutu().getRivi()][s.getAlkuruutu().getSarake()];
+
+        list<Siirto> sallitut;
+        asema.annaLaillisetSiirrot(sallitut);
+
+        bool loytyi = false;
+        for (Siirto& sallittu : sallitut)
+        {
+            if (sallittu.getAlkuruutu().getRivi() == s.getAlkuruutu().getRivi() &&
+                sallittu.getAlkuruutu().getSarake() == s.getAlkuruutu().getSarake() &&
+                sallittu.getLoppuruutu().getRivi() == s.getLoppuruutu().getRivi() &&
+                sallittu.getLoppuruutu().getSarake() == s.getLoppuruutu().getSarake())
+            {
+                loytyi = true;
+                break;
+            }
+        }
+
+        if (!loytyi)
+        {
+            cout << "Virheellinen siirto!\n";
+            continue;
+        }
+
+        if (nappula != nullptr && (nappula == Asema::vs || nappula == Asema::ms))
+        {
+            int loppuRivi = s.getLoppuruutu().getRivi();
+            if ((nappula == Asema::vs && loppuRivi == 0) || (nappula == Asema::ms && loppuRivi == 7))
+            {
+                wstring valinta = ui->kysyKorotus(nappula == Asema::vs ? 0 : 1);
+
+                if (nappula == Asema::vs)
+                {
+                    if (valinta == L"D") s._miksikorotetaan = Asema::vd;
+                    else if (valinta == L"T") s._miksikorotetaan = Asema::vt;
+                    else if (valinta == L"L") s._miksikorotetaan = Asema::vl;
+                    else if (valinta == L"R") s._miksikorotetaan = Asema::vr;
+                }
+                else
+                {
+                    if (valinta == L"D") s._miksikorotetaan = Asema::md;
+                    else if (valinta == L"T") s._miksikorotetaan = Asema::mt;
+                    else if (valinta == L"L") s._miksikorotetaan = Asema::ml;
+                    else if (valinta == L"R") s._miksikorotetaan = Asema::mr;
+                }
+            }
+        }
+
+        asema.paivitaAsema(&s);
+    }
+
+    return 0;
 }
