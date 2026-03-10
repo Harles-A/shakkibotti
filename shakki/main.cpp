@@ -4,6 +4,7 @@
 #include <fcntl.h>
 #include <string>
 #include <list>
+#include <vector>
 #include <cctype>
 
 #include "kayttoliittyma.h"
@@ -15,7 +16,7 @@ using namespace std;
 static string ruutuToStr(Ruutu r)
 {
     char file = char('a' + r.getSarake());
-    int rankNum = 8 - r.getRivi(); 
+    int rankNum = 8 - r.getRivi();
     char rank = char('0' + rankNum);
 
     string out;
@@ -65,6 +66,8 @@ int main()
     Kayttoliittyma* ui = Kayttoliittyma::getInstance();
     ui->aseta_asema(&asema);
 
+    vector<Asema> aikaisemmat_asemat;
+
     int bottiVari = 0;
     while (true)
     {
@@ -99,6 +102,7 @@ int main()
             cout << "Bot siirto: " << siirtoToStr(botSiirto, asema) << "\n";
             cout << "Bot evaluointi: " << paluu._evaluointiArvo << "\n\n";
 
+            aikaisemmat_asemat.push_back(asema);
             asema.paivitaAsema(&botSiirto);
             continue;
         }
@@ -108,13 +112,56 @@ int main()
         if (s.getAlkuruutu().getRivi() == -1 && s.getAlkuruutu().getSarake() == -1)
             break;
 
-        if (s.onkoLyhytLinna() || s.onkoPitkälinna())
+        if (s.getAlkuruutu().getRivi() == -2 && s.getAlkuruutu().getSarake() == -2)
         {
-            asema.paivitaAsema(&s);
+            if (aikaisemmat_asemat.empty())
+            {
+                cout << "Ei voi undo: ei historiaa.\n\n";
+            }
+            else
+            {
+                asema = aikaisemmat_asemat.back();
+                aikaisemmat_asemat.pop_back();
+
+                if (!aikaisemmat_asemat.empty() && asema.getSiirtovuoro() == bottiVari)
+                {
+                    asema = aikaisemmat_asemat.back();
+                    aikaisemmat_asemat.pop_back();
+                }
+
+                ui->aseta_asema(&asema);
+                cout << "Undo tehty.\n\n";
+            }
             continue;
         }
 
-        Nappula* nappula = asema._lauta[s.getAlkuruutu().getRivi()][s.getAlkuruutu().getSarake()];
+        if (s.onkoLyhytLinna() || s.onkoPitkälinna())
+        {
+            list<Siirto> sallitut;
+            asema.annaLaillisetSiirrot(sallitut);
+
+            bool loytyi = false;
+            for (Siirto& sallittu : sallitut)
+            {
+                if ((s.onkoLyhytLinna() && sallittu.onkoLyhytLinna()) ||
+                    (s.onkoPitkälinna() && sallittu.onkoPitkälinna()))
+                {
+                    loytyi = true;
+                    break;
+                }
+            }
+
+            if (!loytyi)
+            {
+                cout << "Virheellinen siirto!\n\n";
+                continue;
+            }
+
+            aikaisemmat_asemat.push_back(asema);
+            asema.paivitaAsema(&s);
+            cout << "\n";
+            continue;
+        }
 
         list<Siirto> sallitut;
         asema.annaLaillisetSiirrot(sallitut);
@@ -134,10 +181,10 @@ int main()
 
         if (!loytyi)
         {
-            cout << "Virheellinen siirto!\n";
+            cout << "Virheellinen siirto!\n\n";
             continue;
         }
-
+        Nappula* nappula = asema._lauta[s.getAlkuruutu().getRivi()][s.getAlkuruutu().getSarake()];
         if (nappula != nullptr && (nappula == Asema::vs || nappula == Asema::ms))
         {
             int loppuRivi = s.getLoppuruutu().getRivi();
@@ -162,7 +209,9 @@ int main()
             }
         }
 
+        aikaisemmat_asemat.push_back(asema);
         asema.paivitaAsema(&s);
+        cout << "\n";
     }
 
     return 0;
