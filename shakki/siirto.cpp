@@ -1,5 +1,4 @@
 #include "siirto.h"
-using namespace std;
 
 // Constructor for a normal move: start square -> end square.
 Siirto::Siirto(Ruutu _alkuRuutu, Ruutu _loppuRuutu)
@@ -13,8 +12,9 @@ Siirto::Siirto(Ruutu _alkuRuutu, Ruutu _loppuRuutu)
 	this->_pitkaLinna = false;
 }
 
-using namespace std;
-
+// Constructor for special castling moves.
+// In castling, we do not use normal start/end squares the same way as in a normal move,
+// so we initialize them to dummy values and store the castling information in the flags.
 Siirto::Siirto(bool _lyhytLinna, bool _pitkaLinna)
 {
 	this->_alkuRuutu = Ruutu(0, 0);
@@ -24,6 +24,8 @@ Siirto::Siirto(bool _lyhytLinna, bool _pitkaLinna)
 	this->_miksikorotetaan = nullptr;
 }
 
+// Default constructor.
+// Creates a safe "empty" move so all member variables have known values.
 Siirto::Siirto()
 {
 	_alkuRuutu = Ruutu(0, 0);

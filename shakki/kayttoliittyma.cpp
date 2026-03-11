@@ -3,7 +3,6 @@
 #include <string>
 #include <fcntl.h>
 #include <io.h>
-#include <iostream>
 #include "kayttoliittyma.h"
 #include <cwctype>
 
@@ -58,7 +57,7 @@ void Kayttoliittyma::piirraLauta()
 
             // Check which piece's pointer is stored in this board square.
             Nappula* p = _asema->_lauta[i][j];
-            // If there is supposed to be a piece in this quare,
+            // If this square contains a piece, print its Unicode symbol.
             if (p != nullptr)
                 // then we print a 3-character "cell"
                 wcout << L" " << p->getUnicode() << L" ";
@@ -134,7 +133,7 @@ Siirto Kayttoliittyma::annaVastustajanSiirto()
 		// If the input is "O-O-O", then we return a Siirto object representing long castling.
         if (s == "O-O-O")
             return Siirto(false, true);
-		// Normal move input validation that checks to make sure the input is exactly 6 characters long. For example "Rg1-f3".
+        // Check the basic input format for a normal move, for example "Rg1-f3".
         if (s.length() != 6)
         {
             cout << "Virheellinen muoto.\n";
@@ -143,7 +142,7 @@ Siirto Kayttoliittyma::annaVastustajanSiirto()
 		// First part of the 6 part series of the "split" input. This is the piece letter for example 'R' for ratsu. Check below for other parts.
         char nappula = s[0];
         // Makes sure the first character of the input s[0] is a valid piece letter.
-		if (!(nappula == 'T' || nappula == 'R' || nappula == 'L' || nappula == 'D' || nappula == 'K' || nappula == 'S')) // ADDED 'S' for Sotilas.
+		if (!(nappula == 'T' || nappula == 'R' || nappula == 'L' || nappula == 'D' || nappula == 'K' || nappula == 'S'))
         {
             cout << "Virheellinen nappulan kirjain.\n";
             continue;
@@ -195,20 +194,20 @@ int Kayttoliittyma::kysyVastustajanVari()
 	return 0;
 }
 
-std::wstring Kayttoliittyma::kysyKorotus(int vari)
+wstring Kayttoliittyma::kysyKorotus(int vari)
 {
-    std::wstring nappula;
+    wstring nappula;
     while (true)
     {
-        std::wcout << L"Valitse korotus (D = Daami, T = Torni, L = Lahetti, R = Ratsu): ";
-        std::wcin >> nappula;
+        wcout << L"Valitse korotus (D = Daami, T = Torni, L = Lahetti, R = Ratsu): ";
+        wcin >> nappula;
         // Makes sure input is uppercase so user can type d/t/l etc.
         for (auto& c : nappula) c = towupper(c);
 		// Only accepts these 4 options. If the input is valid, we break out of the loop and return the input. Otherwise we print an error message and ask again.
         if (nappula == L"D" || nappula == L"T" || nappula == L"L" || nappula == L"R")
             break;
         else
-            std::wcout << L"Virheellinen valinta.\n";
+            wcout << L"Virheellinen valinta.\n";
     }
     return nappula;
 }

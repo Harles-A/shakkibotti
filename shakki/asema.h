@@ -37,7 +37,7 @@ public:
 	MinMaxPaluu maxi(int syvyys, double alfa, double beta);	// Minimax (max:n siirtovuoro).
 	MinMaxPaluu mini(int syvyys, double alfa, double beta);	// Minimax (min:n siirtovuoro).
 	MinMaxPaluu minimax(int syvyys);						// Minimax-algoritmi.
-	void annaLaillisetSiirrot(std::list<Siirto>& lista);	// Siirtogeneraattori.
+	void annaLaillisetSiirrot(list<Siirto>& lista);	// Siirtogeneraattori.
 	int getSiirtovuoro();									// Palauttaa siirtovuoron.
 	void setSiirtovuoro(int);								// Asettaa siirtovuoron.
 	bool getOnkoValkeaKuningasLiikkunut();					// Linnoittuminen mahdollista?
@@ -58,16 +58,16 @@ private:
 	bool _onkoMustaDTliikkunut;			// Linnoitus ei ole sallittu, jos daamisuvustan torni on liikkunut.	
 	bool _onkoMustaKTliikkunut;			// Linnoitus ei ole sallittu, jos kuningassivustan torni on liikkunut.
 
-	double laskeNappuloidenArvo(int);
-	bool onkoAvausTaiKeskipeli(int);
-	double nappuloitaKeskella(int);
-	double linjat(int);
+	//double laskeNappuloidenArvo(int); // No longer used
+	//bool onkoAvausTaiKeskipeli(int); // No longer used
+	//double nappuloitaKeskella(int); // No longer used
+	//double linjat(int); // No longer used
 	bool onkoRuutuUhattu(Ruutu*, int vastustajanVari);
-	void annaLinnoitusSiirrot(std::list<Siirto>& lista, int vari);
+	void annaLinnoitusSiirrot(list<Siirto>& lista, int vari);
 
 	// Karsii siirrot, jotka jättävät oman K:n shakkiin.
-	void huolehdiKuninkaanShakeista(std::list<Siirto>& lista, int vari);
+	void huolehdiKuninkaanShakeista(list<Siirto>& lista, int vari);
 
-	void annaHakuSiirrot(std::list<Siirto>& lista); 
+	void annaHakuSiirrot(list<Siirto>& lista); 
 	bool onkoKuningasShakissa(int omaVari);   
 };
