@@ -5,6 +5,7 @@
 #include "minmaxpaluu.h"
 #include "siirto.h"
 
+using namespace std;
 
 // Ns. "forward declaration". Nyt Asema-luokassa voidaa esitellä Nappula-osoittimia ilman,
 // että nappula.h -tiedostoa täytyy includoida.
@@ -68,6 +69,6 @@ private:
 	// Karsii siirrot, jotka jättävät oman K:n shakkiin.
 	void huolehdiKuninkaanShakeista(list<Siirto>& lista, int vari);
 
-	void annaHakuSiirrot(list<Siirto>& lista); 
-	bool onkoKuningasShakissa(int omaVari);   
+	void annaHakuSiirrot(list<Siirto>& lista);
+	bool onkoKuningasShakissa(int omaVari);
 };
